@@ -60,7 +60,7 @@ class ProfileTest extends TestCase
     private $select;
 
     /**
-     * @inheritDoc
+     * Initialization
      */
     protected function setUp(): void
     {
@@ -92,10 +92,7 @@ class ProfileTest extends TestCase
         );
     }
 
-    /**
-     * @return void
-     */
-    public function testLoadActiveProfile(): void
+    public function testLoadActiveProfile()
     {
         $profileTableName = 'sequence_profile';
         $profileIdFieldName = 'profile_id';
@@ -113,26 +110,30 @@ class ProfileTest extends TestCase
             ->method('getTableName')
             ->willReturn($profileTableName);
         $this->connectionMock->expects($this->any())->method('select')->willReturn($this->select);
+        $this->select->expects($this->at(0))
+            ->method('from')
+            ->with($profileTableName, [$profileIdFieldName])
+            ->willReturn($this->select);
+        $this->select->expects($this->at(1))
+            ->method('where')
+            ->with('meta_id = :meta_id')
+            ->willReturn($this->select);
+        $this->select->expects($this->at(2))
+            ->method('where')
+            ->with('is_active = 1')
+            ->willReturn($this->select);
         $this->connectionMock->expects($this->once())
             ->method('fetchOne')
             ->with($this->select, ['meta_id' => $metaId])
             ->willReturn($profileId);
-        $this->select
+        $this->select->expects($this->at(3))
             ->method('from')
-            ->withConsecutive(
-                [$profileTableName, [$profileIdFieldName]],
-                [$profileTableName, '*', null]
-            )->willReturnOnConsecutiveCalls($this->select, $this->select);
-        $this->select
-            ->method('where')
-            ->withConsecutive(['meta_id = :meta_id'], ['is_active = 1'])
-            ->willReturnOnConsecutiveCalls($this->select, $this->select);
+            ->with($profileTableName, '*', null)
+            ->willReturn($this->select);
         $this->connectionMock->expects($this->any())
             ->method('quoteIdentifier');
         $this->connectionMock->expects($this->once())->method('fetchRow')->willReturn($profileData);
-        $this->profile
-            ->method('setData')
-            ->with($profileData);
+        $this->profile->expects($this->at(1))->method('setData')->with($profileData);
         $this->assertEquals($this->profile, $this->resource->loadActiveProfile($metaId));
     }
 }

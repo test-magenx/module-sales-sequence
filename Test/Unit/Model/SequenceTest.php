@@ -43,9 +43,6 @@ class SequenceTest extends TestCase
      */
     private $sequence;
 
-    /**
-     * @inheritDoc
-     */
     protected function setUp(): void
     {
         $this->meta = $this->getMockBuilder(Meta::class)
@@ -72,23 +69,17 @@ class SequenceTest extends TestCase
             Sequence::class,
             [
                 'meta' => $this->meta,
-                'resource' => $this->resource
+                'resource' => $this->resource,
             ]
         );
     }
 
-    /**
-    * @return void
-    */
-    public function testSequenceInitialNull(): void
+    public function testSequenceInitialNull()
     {
         $this->assertNull($this->sequence->getCurrentValue());
     }
 
-    /**
-    * @return void
-    */
-    public function testSequenceNextValue(): void
+    public function testSequenceNextValue()
     {
         $step = 777;
         $startValue = 3;
@@ -115,32 +106,24 @@ class SequenceTest extends TestCase
             $this->sequenceParameters()->prefix
         );
         $this->profile->expects($this->exactly(3))->method('getStep')->willReturn($step);
-        $withArgs = $willReturnArgs = [];
-
-        $withArgs[] = [$this->sequenceParameters()->testTable];
-        $willReturnArgs[] = ++$lastInsertId;
-
-        $withArgs[] = [$this->sequenceParameters()->testTable];
-        $willReturnArgs[] = ++$lastInsertId;
-
-        $withArgs[] = [$this->sequenceParameters()->testTable];
-        $willReturnArgs[] = ++$lastInsertId;
-
-        $this->connectionMock
-            ->method('lastInsertId')
-            ->withConsecutive(...$withArgs)
-            ->willReturnOnConsecutiveCalls(...$willReturnArgs);
-
-        $this->nextIncrementStep(780);
-        $this->nextIncrementStep(1557);
-        $this->nextIncrementStep(2334);
+        $lastInsertId = $this->nextIncrementStep($lastInsertId, 780);
+        $lastInsertId = $this->nextIncrementStep($lastInsertId, 1557);
+        $this->nextIncrementStep($lastInsertId, 2334);
     }
 
     /**
+     * @param $lastInsertId
      * @param $sequenceNumber
+     * @return mixed
      */
-    private function nextIncrementStep($sequenceNumber)
+    private function nextIncrementStep($lastInsertId, $sequenceNumber)
     {
+        $lastInsertId++;
+        $this->connectionMock->expects($this->at(1))->method('lastInsertId')->with(
+            $this->sequenceParameters()->testTable
+        )->willReturn(
+            $lastInsertId
+        );
         $this->assertEquals(
             sprintf(
                 Sequence::DEFAULT_PATTERN,
@@ -150,12 +133,13 @@ class SequenceTest extends TestCase
             ),
             $this->sequence->getNextValue()
         );
+        return $lastInsertId;
     }
 
     /**
      * @return \stdClass
      */
-    private function sequenceParameters(): \stdClass
+    private function sequenceParameters()
     {
         $data = new \stdClass();
         $data->prefix = 'AA-';
